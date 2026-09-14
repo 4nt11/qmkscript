@@ -6,9 +6,9 @@ escupe como código QMK (`SEND_STRING(...)`), como macro de vial (json), o como
 360 que reverseé). el bytecode se carga por raw-HID sin reflashear, ese es el
 truco.
 
-proyecto de aprendizaje: overengineering a propósito con flex/bison, en la línea
-de langsec / hammer / meredith l. patterson. la gramática valida lo más temprano
-posible y no deja escape hatches. nada de "ya lo chequeo después".
+proyecto de aprendizaje: overengineering a propósito con flex/bison, con mentalidad
+langsec. la gramática valida lo más temprano posible y no deja escape hatches.
+nada de "ya lo chequeo después".
 
 ## ⚠️ fase experimental
 
