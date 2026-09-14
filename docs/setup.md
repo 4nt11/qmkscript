@@ -78,9 +78,64 @@ en el host. sirve para validar el pipeline sin tocar hardware:
 qmkscript --emit=bytecode examples/hola.qks | ./build/qks-run -
 ```
 
-el firmware del AN360 (con la VM adentro) vive aparte, mirá las notas de ese
-proyecto. si solo querés prototipar payloads sin nada de eso, `--emit=vial`
-alcanza.
+si solo querés prototipar payloads sin tocar el firmware, `--emit=vial` alcanza.
+la integración completa de la VM en el teclado está en la próxima sección.
+
+## la VM adentro del firmware (ejemplo real: AN360)
+
+hasta acá todo fue el compilador. la otra mitad es la VM corriendo DENTRO del
+teclado. el AN360 es el ejemplo real, su firmware vive en
+`~/vial-qmk/keyboards/an360/`.
+
+**vendor drop de verdad**: `vm.c` y `vm.h` del firmware son copias IDÉNTICAS de
+`src/vm.c` / `src/vm.h` de qmkscript (verificado con `diff`, byte por byte). eso
+es justo lo que promete el header de `vm.c`: copiás los dos ficheros, das tus
+callbacks, y corre. cuando cambie la ISA, recopiás los dos ficheros al firmware
+y listo. nada más.
+
+**los ficheros que lo integran** (de `rules.mk`):
+
+| fichero          | rol                                                    |
+|------------------|--------------------------------------------------------|
+| `vm.c` / `vm.h`  | vendor drop de la VM (idéntico a `qmkscript/src`)      |
+| `qks_hid.c`      | receptor raw-HID (`raw_hid_receive_kb`)                |
+| `qks_storage.c`  | 8 slots de payload en flash                            |
+| `qks_dispatch.c` | tabla RAM (target_kc, mods) a slot, sale del `bind()`  |
+| `qks_run.c`      | carga + valida un slot y lo dispara                    |
+| `qks_worker.c` / `qks_multicore.c` | offload de `vm_exec` al core 1       |
+
+**cómo se cablea la VM**: en `qks_worker.c` hay un `vm_ops_t` con los callbacks
+(`send_string`, `tap_code`, `wait_ms`, `register_mods`, `unregister_mods`)
+apuntando a funciones de QMK. el core 1 hace `vm_load_and_validate()` y después
+`vm_exec(&prog, &ops, NULL)`. exactamente el contrato del vendor drop, sin
+inventar nada.
+
+**el viaje de un payload**, punta a punta:
+
+1. `qmkscript --push foo.qks` compila a bytecode y lo pipea a `qks-push`.
+2. `qks-push` lo manda por raw-HID en chunks. wire v2 (multi-slot): magic `0xE0`,
+   cmd `WRITE` (0x01) por chunk, `FLUSH` (0x02) para commit-ear, cada uno con su
+   `slot_idx`. también hay `DUMP` (0x03) y `RESET` (0x04).
+3. `qks_hid.c` acumula los `WRITE` en un buffer RAM, y en el `FLUSH` los escribe
+   al slot en flash (`qks_storage_write`). tras el commit re-escanea el dispatch.
+4. `qks_dispatch` mapea el `bind(target_kc, mods)` del header a ese slot.
+5. apretás la tecla que matchea, `qks_run_slot(slot)` valida el bytecode y
+   dispara `qks_worker_dispatch`, que corre `vm_exec` en el core 1. los callbacks
+   teclean en la ventana activa.
+
+todo el receiver loguea por `qmk console` (`CONSOLE_ENABLE = yes`), útil para
+debuggear el transporte.
+
+**build + flash** (mi setup, RP2040):
+
+```bash
+cd ~/vial-qmk && . .venv/bin/activate
+QMK_HOME="$HOME/vial-qmk" make an360:vial      # -> an360_vial.uf2
+picotool load ~/vial-qmk/an360_vial.uf2 && picotool reboot
+```
+
+ojo: el build USA el venv de python3.11 (`~/vial-qmk/.venv`). el `qmk` global
+corre en py3.12+ y se muere con `ast.Num`.
 
 ## ficheros
 
