@@ -1,0 +1,11 @@
+# C.2.e demo: reasignación. La var 'i' vive en var[0] TODO el programa;
+# cada 'i = ...' es un STORE 0 sobre el mismo slot. Reusable, no leak
+# de vars por cada reassign.
+#
+# NOTA: sin control de flujo aún (C.3), esto es lineal. Un contador real
+# con incremento en loop llega en la próxima fase.
+var i = 0
+i = i + 1        # i = 1
+i = i + 1        # i = 2
+i = i * 3        # i = 6
+i = i - 1        # i = 5

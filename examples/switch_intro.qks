@@ -1,0 +1,27 @@
+# switch_intro.qks -- C.3.g: switch con OP_SWITCH real (jump table inline).
+#
+# Bytecode: OP_SWITCH u16 n_cases [key:u32 off:i16]xN default_off:i16.
+# Runtime: linear scan de la tabla, offset relativo al byte tras la tabla.
+# Sin fall-through: cada case termina con JMP_S al end (relax_jumps los
+# vuelve short automaticamente porque los case bodies son chicos).
+#
+# Compile-time checks: duplicate case detection, values solo literals.
+#
+# Layout que emite este .qks:
+#   PUSH_0/STORE_0     (var x = 0)
+#   LOAD_0             (key = x)
+#   OP_SWITCH n=3      + tabla + default_off
+#   STR "uno";   JMP_S end
+#   STR "dos";   JMP_S end
+#   STR "tres";  JMP_S end
+#   STR "otro"   (default, sin JMP)
+# end: TAP enter; HALT
+
+var x = 2
+switch x {
+    case 1: type "uno"
+    case 2: type "dos"
+    case 3: type "tres"
+    default: type "otro"
+}
+tap enter

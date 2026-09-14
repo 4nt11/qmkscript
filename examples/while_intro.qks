@@ -1,0 +1,29 @@
+# while_intro.qks -- C.3.d: qmkscript es TURING-COMPLETO.
+#
+# Un while + una var + reasign = alcanza para computar cualquier funcion
+# computable (Bohm-Jacopini 1966: while + secuenciacion + condicional
+# es suficiente).
+#
+# Layout emitido:
+#   loop_start:               <-- posicion anotada antes de emit(cond)
+#       LOAD i
+#       PUSH 5
+#       LT                     ; TOS = 0 o 1
+#       JMPZ post_loop         ; FORWARD jump con backpatch (target = post_loop)
+#       STR "x"                ; body
+#       LOAD i; PUSH 1; ADD; STORE i
+#       JMP loop_start         ; BACKWARD jump con target ya conocido (offset negativo)
+#   post_loop:
+#
+# GOTCHA: `else` en linea separada de `}` no compila (LALR(1) no puede
+# esperar past SEP). Regla: `} else {` siempre en la misma linea. Mismo
+# criterio que Go 2007.
+#
+# Ejecucion: teclea "x" cinco veces, luego ENTER.
+
+var i = 0
+while i < 5 {
+    type "x"
+    i = i + 1
+}
+tap enter

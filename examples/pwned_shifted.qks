@@ -1,0 +1,5 @@
+# fase B demo: chord con string dentro.
+# shift held mientras se teclea "pwn" -> "PWN" en mayúsculas.
+# Bytecode: REG_MODS + STR + UNREG_MODS
+delay 300
+chord [shift, "pwn"]

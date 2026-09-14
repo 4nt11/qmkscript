@@ -1,0 +1,23 @@
+# if_else.qks -- C.3.c: if/else + else-if chaining.
+#
+# Dos backpatches por if/else:
+#   JMPZ salta al ELSE si cond es falsa
+#   JMP  al final del THEN salta sobre el ELSE (evita fall-through)
+#
+# `else if` es azucar sintactico: la gramatica desazucara a
+# `else { if ... }` envolviendo en un AST_BLOCK sintetico.
+# Cero codigo nuevo en emit_bytecode -- puro recursion.
+#
+# Ejecucion (con x=2): teclea "dos" y ENTER.
+
+var x = 2
+if x == 1 {
+    type "uno"
+} else if x == 2 {
+    type "dos"
+} else if x == 3 {
+    type "tres"
+} else {
+    type "otro"
+}
+tap enter

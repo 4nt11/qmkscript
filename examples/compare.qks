@@ -1,0 +1,13 @@
+# C.2.d demo: comparaciones. Resultado siempre 0 (false) o 1 (true) en el
+# stack, guardado como cualquier var. Comparaciones tienen precedencia
+# MENOR que aritmética -> a + b > c * d parsea como (a+b) > (c*d).
+var a = 10
+var b = 5
+
+var less    = a < b        # 0
+var greater = a > b        # 1
+var equal   = a == 10      # 1
+var notequal = b != 3      # 1
+
+# aritmética antes de comparación por precedencia
+var mixed   = a + b > b * 2   # 15 > 10 -> 1

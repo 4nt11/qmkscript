@@ -1,0 +1,2 @@
+# demo del separator `;`: varias sentencias en la misma línea
+delay 200; type "hola "; type "mundo"; tap enter

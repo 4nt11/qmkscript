@@ -1,0 +1,3 @@
+# mismo payload SIN delay: para medir la latencia real del pipeline
+# process_record_kb -> qks_run_slot -> vm_exec -> callbacks QMK.
+chord [shift, "pwn"]

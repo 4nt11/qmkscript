@@ -1,0 +1,4 @@
+# safe test payload -- solo teclea una string en la ventana activa,
+# sin combos ni ENTER. Ideal para verificar el ciclo entero sin efecto lateral.
+delay 300
+type "pwnedbyanti"

@@ -1,0 +1,19 @@
+# block.qks -- C.3.a: bloques { } como container sintactico.
+#
+# Un bloque agrupa statements pero NO ejecuta nada por si mismo:
+# emite el mismo bytecode que sus stmts sueltos. Existe para que
+# if/while/switch (C.3.b+) tengan un `then/else/body` con tipo unico.
+#
+# Este ejemplo mezcla stmts al nivel top con bloques anidados
+# para verificar que la transparencia semantica sobrevive el anidado.
+
+delay 100
+{
+    type "hola"
+    tap enter
+    {
+        delay 50
+        chord [gui, r]
+    }
+}
+tap esc

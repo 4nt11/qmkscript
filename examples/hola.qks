@@ -1,0 +1,7 @@
+# classic Ducky payload en sintaxis qmkscript v1:
+# abre el diálogo "Run" de Windows y lanza calc.exe
+delay 500
+chord [gui, r]
+delay 200
+type "calc.exe"
+tap enter

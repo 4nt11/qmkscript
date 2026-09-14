@@ -1,0 +1,11 @@
+# C.2.c demo: aritmética con precedencia y paréntesis.
+# El parser respeta * / antes que + -, y los paréntesis fuerzan agrupación.
+# Cada expresión compila a RPN via postorder walk.
+var a = 10
+var b = 5
+var sum = a + b               # 15
+var product = a * b           # 50
+var mixed = a + b * 2         # 20 (mult ANTES de add por precedencia)
+var forced = (a + b) * 2      # 30 (paréntesis fuerzan)
+var diff = product - sum      # 35
+var half = product / 2        # 25

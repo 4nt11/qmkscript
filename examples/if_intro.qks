@@ -1,0 +1,13 @@
+# if_intro.qks -- C.3.b: primer if. Backpatching en acción.
+#
+# Compila a JMPZ con offset RESUELTO. Ver el bytecode dumpeado:
+# `qmkscript --emit=bcdump examples/if_intro.qks`
+#
+# Runtime: si x < 10 (true), teclea "chico". Si no, salta al TAP.
+# Siempre teclea ENTER al final.
+
+var x = 5
+if x < 10 {
+    type "chico"
+}
+tap enter

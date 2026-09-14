@@ -1,0 +1,8 @@
+# C.2.a demo: declaración de variables con literales.
+# Cada 'var name = value' compila a PUSH+STORE. Symbol table asigna idx
+# 0..N-1 automáticamente. Las vars no se ven en el output HID (solo viven
+# en el estado interno de la VM), pero cuando lleguen las expresiones
+# (C.2.c) podremos usarlas como operandos.
+var x = 42
+var y = 100
+var zero = 0

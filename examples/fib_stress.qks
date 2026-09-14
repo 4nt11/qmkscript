@@ -1,0 +1,25 @@
+# fib_stress.qks -- baseline test para core 1 offload.
+# Computa Fibonacci iterativo N veces (los numeros no se ven -- no tenemos
+# num->str aun), luego teclea "done" para marcar fin.
+#
+# Objetivo: bloquear core 0 con computo puro (sin delays, sin I/O) para
+# medir cuanto tiempo el kb queda MUERTO. Predecimos que:
+#   - matrix scan no corre -> teclas que apretemos durante el payload se PIERDEN
+#   - LCD queda congelado (Quantum Painter tick tambien en core 0)
+#   - qmk console tal vez sigue (USB IRQ es separado)
+#
+# Sizing: 300000 iters * ~8 opcodes por iter * ~200ns/opcode ~= 500ms bloqueado.
+# Ajustar el 300000 si queremos mas/menos duracion.
+
+var a = 0
+var b = 1
+var t = 0
+var i = 0
+while i < 300000 {
+    t = a + b
+    a = b
+    b = t
+    i = i + 1
+}
+type "done"
+tap enter

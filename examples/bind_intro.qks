@@ -1,0 +1,19 @@
+# bind_intro.qks -- C.4.a: bind() declarativo, primera stdlib function.
+#
+# bind() es metadata compile-time: le dice al firmware qué tecla dispara
+# este payload cuando se cargue en flash. Acepta 3 sabores:
+#
+#   bind(KC_X)              -- constante del keycode QMK (via keycodes_generated.h)
+#   bind(tap enter)         -- lowercase tap syntax
+#   bind(chord [gui, r])    -- combo mods + 1 tecla
+#
+# Se emite en el header v2 del .bin como (target_kc: u16, target_mods: u8).
+# El firmware v2 lo lee al load-time.
+#
+# Multi-slot storage + dispatch dinámico son fase C.4.b (futuro). Por ahora
+# el value flowea al header pero el firmware sigue triggereando via QK_KB_0.
+
+bind(chord [gui, r])
+
+type "hola desde chord [gui, r]"
+tap enter
