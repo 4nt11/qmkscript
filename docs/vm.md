@@ -39,9 +39,65 @@ typedef struct {
     void (*unregister_mods) (uint8_t mods, void *ctx);
 } vm_ops_t;
 ```
-el firmware los rellena con las funciones homónimas de QMK, el host con
-impresoras. un puntero `NULL` (o `ops` entero en `NULL`) es no-op silencioso,
-bueno para dry-run y testing. `ctx` es opaco, se forwardea a cada callback.
+cada opcode con efecto llama a uno de estos. la VM no sabe NADA del entorno: vos
+le decís qué significa "teclear" pasándole las funciones. un puntero `NULL` (o
+`ops` entero en `NULL`) es no-op silencioso, bueno para dry-run y testing. `ctx`
+es opaco, se forwardea igual a cada callback (te sirve para pasar estado sin
+globales).
+
+### cómo se escriben
+
+la versión mínima es directa: cada callback llama a la función de QMK que hace la
+cosa. algo así:
+
+```c
+static void my_tap_code(uint8_t kc, void *ctx)   { (void)ctx; tap_code(kc); }
+static void my_wait_ms(uint16_t ms, void *ctx)   { (void)ctx; wait_ms(ms); }
+static void my_reg_mods(uint8_t m, void *ctx)    { (void)ctx; register_mods(m); }
+static void my_unreg_mods(uint8_t m, void *ctx)  { (void)ctx; unregister_mods(m); }
+static void my_send_string(const uint8_t *b, uint16_t n, void *ctx) {
+    (void)ctx;
+    char tmp[N]; memcpy(tmp, b, n); tmp[n] = '\0';   // send_string quiere \0
+    send_string(tmp);
+}
+
+static const vm_ops_t ops = {
+    .send_string = my_send_string, .tap_code = my_tap_code,
+    .wait_ms = my_wait_ms, .register_mods = my_reg_mods,
+    .unregister_mods = my_unreg_mods,
+};
+```
+ojo con `send_string`: QMK lo quiere null-terminated y el `bytes` que te pasa la
+VM NO lo está. copiás a un buffer local y le pegás el `\0`.
+
+### el ejemplo real (AN360)
+
+el AN360 corre la VM en el **core 1** para no congelar el teclado durante el
+payload, y eso complica los callbacks: el USB solo se toca desde el core 0. así
+que los callbacks que corren en core 1 NO tocan QMK, ENCOLAN un evento en una
+cola lock-free (SPSC), y el core 0 la drena y ahí sí llama a las funciones de
+QMK:
+
+```c
+// core 1: el callback solo encola, no toca el USB.
+static void c1_tap_code(uint8_t kc, void *ctx) {
+    (void)ctx;
+    evq_push((qks_event_t){QKS_EV_TAP, kc, 0, NULL});
+}
+
+// core 0: drena la cola y ahí sí teclea de verdad.
+case QKS_EV_TAP: tap_code(ev->b1); break;
+```
+
+la excepción es `wait_ms`: ese SÍ corre en el core 1 (busy-wait sobre el timer de
+1 MHz del RP2040), porque bloquear el core 1 es justo lo que querés. el core 0
+sigue escaneando la matriz, el USB y la LCD como si nada. ese es todo el punto del
+offload.
+
+el patrón general: si tu firmware es single-core y simple, los callbacks son
+one-liners a QMK. si querés que el teclado siga vivo mientras corre un payload
+largo, se vuelven un productor/consumidor entre cores. la VM no cambia, solo
+cambia qué metés adentro de los cinco punteros.
 
 ### `vm_program_t`
 ```c

@@ -84,31 +84,29 @@ la integración completa de la VM en el teclado está en la próxima sección.
 ## la VM adentro del firmware (ejemplo real: AN360)
 
 hasta acá todo fue el compilador. la otra mitad es la VM corriendo DENTRO del
-teclado. el AN360 es el ejemplo real, su firmware vive en
-`~/vial-qmk/keyboards/an360/`.
+teclado. el AN360 es el ejemplo real: su firmware es un keyboard QMK, en
+<https://github.com/4nt11/an360-firmware>.
 
-**vendor drop de verdad**: `vm.c` y `vm.h` del firmware son copias IDÉNTICAS de
-`src/vm.c` / `src/vm.h` de qmkscript (verificado con `diff`, byte por byte). eso
-es justo lo que promete el header de `vm.c`: copiás los dos ficheros, das tus
-callbacks, y corre. cuando cambie la ISA, recopiás los dos ficheros al firmware
-y listo. nada más.
+**vendor drop**: `vm.c` y `vm.h` del firmware son el mismo `src/vm.c` / `src/vm.h`
+de qmkscript, copiados sin cambios. es justo lo que promete el header de `vm.c`:
+copiás los dos ficheros, das tus callbacks, y corre. cuando cambie la ISA,
+recopiás los dos y listo.
 
 **los ficheros que lo integran** (de `rules.mk`):
 
 | fichero          | rol                                                    |
 |------------------|--------------------------------------------------------|
-| `vm.c` / `vm.h`  | vendor drop de la VM (idéntico a `qmkscript/src`)      |
+| `vm.c` / `vm.h`  | la VM, copiada de qmkscript sin cambios                |
 | `qks_hid.c`      | receptor raw-HID (`raw_hid_receive_kb`)                |
 | `qks_storage.c`  | 8 slots de payload en flash                            |
 | `qks_dispatch.c` | tabla RAM (target_kc, mods) a slot, sale del `bind()`  |
 | `qks_run.c`      | carga + valida un slot y lo dispara                    |
 | `qks_worker.c` / `qks_multicore.c` | offload de `vm_exec` al core 1       |
 
-**cómo se cablea la VM**: en `qks_worker.c` hay un `vm_ops_t` con los callbacks
-(`send_string`, `tap_code`, `wait_ms`, `register_mods`, `unregister_mods`)
-apuntando a funciones de QMK. el core 1 hace `vm_load_and_validate()` y después
-`vm_exec(&prog, &ops, NULL)`. exactamente el contrato del vendor drop, sin
-inventar nada.
+**cómo se cablea la VM**: `qks_run.c` y el worker de core 1 (`qks_worker.c`) arman
+un `vm_ops_t` con los callbacks apuntando a funciones de QMK, hacen
+`vm_load_and_validate()` y después `vm_exec()`. cómo se escriben esos callbacks,
+con el twist del offload a core 1, está en [`vm.md`](vm.md).
 
 **el viaje de un payload**, punta a punta:
 
@@ -126,16 +124,15 @@ inventar nada.
 todo el receiver loguea por `qmk console` (`CONSOLE_ENABLE = yes`), útil para
 debuggear el transporte.
 
-**build + flash** (mi setup, RP2040):
+**build + flash** (RP2040): es un keyboard QMK como cualquier otro.
 
 ```bash
-cd ~/vial-qmk && . .venv/bin/activate
-QMK_HOME="$HOME/vial-qmk" make an360:vial      # -> an360_vial.uf2
-picotool load ~/vial-qmk/an360_vial.uf2 && picotool reboot
+make an360:vial                       # -> an360_vial.uf2
+picotool load an360_vial.uf2 && picotool reboot
 ```
 
-ojo: el build USA el venv de python3.11 (`~/vial-qmk/.venv`). el `qmk` global
-corre en py3.12+ y se muere con `ast.Num`.
+ojo: el toolchain de qmk/vial necesita python 3.11. las versiones más nuevas se
+mueren con `ast.Num`.
 
 ## ficheros
 
@@ -167,7 +164,7 @@ en todos los backends, es tu red.
 
 cuando QMK upstream mete keycodes nuevos, o para agregar un layout:
 ```bash
-make regen-keycodes            # default: parsea ~/vial-qmk
+make regen-keycodes            # busca tu checkout de vial-qmk (default del Makefile)
 make regen-layouts
-make regen-keycodes QMK=/otro/vial-qmk   # override del path
+make regen-keycodes QMK=<tu vial-qmk>    # override si lo tenés en otro lado
 ```
