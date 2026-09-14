@@ -1,38 +1,39 @@
-# qmkscript — referencia del lenguaje
+# qmkscript: referencia del lenguaje
 
-Sintaxis v1: lowercase, python-ish. Fuente de verdad: `src/lex.l` (tokens) y
-`src/parse.y` (gramática LALR(1)). Todo lo de acá está en `examples/`.
+sintaxis v1: lowercase, python-ish. la fuente de verdad es `src/lex.l` (tokens) y
+`src/parse.y` (gramática LALR(1)). todo lo de acá sale de `examples/`, nada
+inventado.
 
-## Léxico
+## léxico
 
-- **Comentarios**: `#` hasta fin de línea.
-- **Separadores de statement**: `;` o newline (el mismo token `SEP`). Una
-  statement por línea, o varias separadas por `;`:
+- **comentarios**: `#` hasta fin de línea.
+- **separadores de statement**: `;` o newline (el mismo token `SEP`). una
+  statement por línea, o varias con `;`:
   ```
   delay 200; type "hola "; type "mundo"; tap enter
   ```
-- **Strings** `"..."` con escapes `\"` `\\` `\n` `\t` `\r`. String sin cerrar
+- **strings** `"..."` con escapes `\"` `\\` `\n` `\t` `\r`. string sin cerrar
   antes del newline = error.
-- **Char literals** `'x'`: exactamente 1 carácter, mismos escapes (`\'` en vez de
-  `\"`). Más de 1 char = error.
-- **Números**: enteros decimales (`atoi`, sin signo en la fuente).
-- **Identificadores lowercase** `[a-z_][a-z0-9_]*`: nombres de vars, teclas y
+- **char literals** `'x'`: EXACTAMENTE 1 carácter, mismos escapes (`\'` en vez de
+  `\"`). más de 1 char = error.
+- **números**: enteros decimales (`atoi`, sin signo en la fuente).
+- **identificadores lowercase** `[a-z_][a-z0-9_]*`: nombres de vars, teclas y
   modificadores.
-- **Identificadores UPPER** `[A-Z][A-Z0-9_]+`: se resuelven en compile-time
+- **identificadores UPPER** `[A-Z][A-Z0-9_]+`: se resuelven en compile-time
   contra las tablas generadas (`KC_*`, `QK_*` en `keycodes_generated.h`, y
-  `LAYOUT_*` en `layouts_generated.h`). Un UPPER desconocido es error de
-  compilación, no se pasa como texto.
+  `LAYOUT_*` en `layouts_generated.h`). un UPPER desconocido es error de
+  compilación, NO se pasa como texto. sin escape hatches.
 
-## Statements
+## statements
 
 ### `type "..."`
-Teclea la string en la ventana activa (bytecode `OP_STR`).
+teclea la string en la ventana activa (bytecode `OP_STR`).
 ```
 type "pwnedbyanti"
 ```
 
 ### `tap <tecla>`
-Toca una tecla, por nombre lowercase (`enter`, `esc`, `tab`, `r`, `a`, `1`, ...)
+toca una tecla, por nombre lowercase (`enter`, `esc`, `tab`, `r`, `a`, `1`, ...)
 o por char literal (`'r'`).
 ```
 tap enter
@@ -40,24 +41,24 @@ tap 'r'
 ```
 
 ### `delay N`
-Espera `N` milisegundos.
+espera `N` ms.
 ```
 delay 500
 ```
 
 ### `var name = expr` / `name = expr`
-Declara o reasigna una variable. El symbol table asigna slots `0..N-1`
-automáticamente; reasignar reusa el slot (no leakea vars).
+declara o reasigna una variable. el symbol table asigna slots `0..N-1` solo;
+reasignar reusa el slot, no leakea vars.
 ```
 var i = 0
 i = i + 1
 ```
-Las vars viven solo en el estado de la VM, no se ven en el output HID.
+las vars viven solo en el estado de la VM, no se ven en el output HID.
 
 ### bloque `{ ... }`
-Agrupa statements. No ejecuta nada por sí mismo: emite el mismo bytecode que sus
-stmts sueltos. Existe para dar a `if`/`while`/`switch` un cuerpo con tipo único.
-Anidable.
+agrupa statements pero NO ejecuta nada por sí mismo: emite el mismo bytecode que
+los stmts sueltos. existe para darle a `if`/`while`/`switch` un cuerpo con tipo
+único. anidable.
 ```
 {
     type "hola"
@@ -66,8 +67,8 @@ Anidable.
 ```
 
 ### `if` / `else` / `else if`
-Condición **sin paréntesis**, braces **obligatorias** (esto mata el
-dangling-else a nivel léxico).
+condición SIN paréntesis, braces OBLIGATORIAS (así mato el dangling-else a nivel
+léxico, no hay ambigüedad que resolver).
 ```
 var x = 2
 if x == 1 {
@@ -80,11 +81,11 @@ if x == 1 {
 ```
 `else if` es azúcar: la gramática lo desazucara a `else { if ... }`.
 
-**Gotcha**: `} else {` va SIEMPRE en la misma línea. El `else` en línea aparte
-del `}` no compila (LALR(1) no puede esperar past `SEP`). Mismo criterio que Go.
+**gotcha**: `} else {` va SIEMPRE en la misma línea. el `else` en línea aparte
+del `}` no compila, LALR(1) no puede esperar past `SEP`. mismo criterio que go.
 
 ### `while expr block`
-Misma forma que `if`: cond sin parens, braces obligatorias.
+misma forma que `if`: cond sin parens, braces obligatorias.
 ```
 var i = 0
 while i < 5 {
@@ -92,12 +93,13 @@ while i < 5 {
     i = i + 1
 }
 ```
-`while` + var + reasign hace a qmkscript **Turing-completo** (Böhm-Jacopini).
+`while` + var + reasign y ya sos **turing-completo** (böhm-jacopini). con eso
+alcanza para computar cualquier cosa computable.
 
 ### `switch expr { case N: stmt ... default: stmt }`
-La key es una expr arbitraria. Los valores de `case` deben ser **literales**
-(no `case x+1:`, para mantener la tabla determinística en compile-time). Sin
-fall-through: cada case salta al final. Detecta cases duplicados en compile-time.
+la key es una expr arbitraria. los valores de `case` tienen que ser **literales**
+(nada de `case x+1:`, la tabla se queda determinística en compile-time). sin
+fall-through: cada case salta al final. detecta cases duplicados en compile-time.
 ```
 var x = 2
 switch x {
@@ -107,76 +109,78 @@ switch x {
     default: type "otro"
 }
 ```
-El body de un case es UN stmt; para varios, usar bloque `{ ... }`.
+el body de un case es UN stmt. para varios, metelos en un bloque `{ ... }`.
 
 ### `chord [ ... ]`
-Modificadores held mientras se ejecutan una o más acciones (taps/strings). Los
-mods van **primero**; un mod después de una tecla es error.
+modificadores held mientras corren una o más acciones (taps/strings). los mods
+van PRIMERO. un mod después de una tecla es error.
 ```
 chord [gui, r]            # LGUI/RGUI + tap r
 chord [shift, "pwn"]      # shift held mientras teclea "pwn" -> "PWN"
 ```
-Nombres de mod:
-- Genéricos: `gui`, `ctrl`, `alt`, `shift` — emiten **ambos** bits L|R, el
-  firmware los toma como "cualquier lado".
-- Explícitos: `lgui`/`rgui`, `lctl`/`rctl`, `lalt`/`ralt`, `lsft`/`rsft` — solo
+nombres de mod:
+- genéricos: `gui`, `ctrl`, `alt`, `shift`. emiten AMBOS bits L|R, el firmware
+  los toma como "cualquier lado".
+- explícitos: `lgui`/`rgui`, `lctl`/`rctl`, `lalt`/`ralt`, `lsft`/`rsft`. solo
   su lado.
 
-Si el chord es un solo mod + una sola tecla, colapsa a un `OP_CHORD` compacto;
-si no, se emite como `OP_REG_MODS` + secuencia + `OP_UNREG_MODS`.
+si el chord es un solo mod + una sola tecla, colapsa a un `OP_CHORD` compacto. si
+no, sale como `OP_REG_MODS` + secuencia + `OP_UNREG_MODS`.
 
 ### `bind(...)`
-Metadata compile-time: qué tecla dispara este payload cuando se cargue en el
-firmware. Tres sabores de target:
+metadata compile-time: qué tecla dispara este payload cuando se cargue en el
+firmware. tres sabores de target:
 ```
-bind(KC_R)                # constante keycode QMK (resuelta por el lexer)
+bind(KC_R)                # constante keycode QMK (la resuelve el lexer)
 bind(tap enter)           # tap por nombre o char
 bind(chord [gui, r])      # mods + 1 tecla
 ```
-Opcional `layer=`:
+opcional `layer=`:
 ```
 bind(layer=3, tap enter)  # match solo si el layer 3 está on. N en [0..15]
 bind(layer=any, tap r)    # match en cualquier layer
 ```
-Sin `layer=`, default = layer 3 (OFFSEC) por convención. `N` fuera de `[0..15]`
+sin `layer=`, default = layer 3 (OFFSEC) por convención. `N` fuera de `[0..15]`
 es error.
 
 ### `layout(expr)`
-Cambia el layout activo en runtime. La expr se evalúa y actualiza el layout de la
-VM (afecta cómo se mapean chars a scancodes: el drama de las tildes).
+cambia el layout activo en runtime. la expr se evalúa y actualiza el layout de la
+VM (afecta cómo se mapean chars a scancodes, o sea: el drama de las tildes).
 ```
 layout(LAYOUT_LATAM)
 ```
-Layouts disponibles (de `layouts_generated.h`): `LAYOUT_DEFAULT`, `LAYOUT_ES`,
-`LAYOUT_LATAM`. La expr puede ser variable (`layout(i)`) también.
+layouts que hay (de `layouts_generated.h`): `LAYOUT_DEFAULT`, `LAYOUT_ES`,
+`LAYOUT_LATAM`. la expr puede ser variable también (`layout(i)`).
 
-## Expresiones
+## expresiones
 
-Operandos: números, refs a var (`ident`), constantes UPPER (resueltas a número),
+operandos: números, refs a var (`ident`), constantes UPPER (resueltas a número),
 y sub-expresiones entre paréntesis.
 
-Operadores y precedencia (de menor a mayor):
+precedencia (de menor a mayor):
 
-| Nivel | Operadores          | Asociatividad |
+| nivel | operadores          | asociatividad |
 |-------|---------------------|---------------|
 | 1     | `==` `!=` `<` `>`   | **no asociativa** |
 | 2     | `+` `-`             | izquierda     |
 | 3     | `*` `/`             | izquierda     |
 
-- La comparación es **no asociativa** a propósito: `a < b < c` es error de
-  parseo (contra el bug clásico de C donde `a<b<c` evalúa `(a<b)<c`).
-- La comparación tiene menor precedencia que la aritmética: `a + b > c * d`
-  parsea como `(a+b) > (c*d)`.
-- Comparación devuelve `0` (false) o `1` (true) en el stack.
+- la comparación es **no asociativa** a propósito: `a < b < c` es error de
+  parseo. es contra el bug clásico de C donde `a<b<c` evalúa `(a<b)<c` y te da
+  cualquier cosa.
+- la comparación pega MENOS fuerte que la aritmética: `a + b > c * d` parsea como
+  `(a+b) > (c*d)`.
+- comparar devuelve `0` (false) o `1` (true) en el stack.
 
 ```
 var mixed  = a + b * 2        # 20: * antes que +
-var forced = (a + b) * 2      # 30: paréntesis fuerzan
+var forced = (a + b) * 2      # 30: paréntesis mandan
 var less   = a < b            # 0 o 1
 ```
 
-## Backends
+## backends
 
-El mismo AST alimenta cuatro backends (`--emit=`): `dump`, `c`, `vial`,
-`bytecode`/`bcdump`. Ver [`setup.md`](setup.md) para los modos y la ruta `--push`
-al AN360.
+el mismo AST alimenta cuatro backends (`--emit=`): `dump`, `c`, `vial`,
+`bytecode`/`bcdump`. mirá [`setup.md`](setup.md) para los modos y la ruta
+`--push` al AN360, [`isa.md`](isa.md) para el bytecode y [`vm.md`](vm.md) para la
+VM.
